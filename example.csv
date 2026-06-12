@@ -1,0 +1,4 @@
+title,due_date,due_time,course,duration_minutes,notes,url,location,reminder_minutes
+Signals project checkpoint,2026-09-18,23:59,EE 3302,30,Upload the writeup,https://example.com/checkpoint,,180
+Operating systems midterm,2026-09-22,14:00,CS 4348,120,Bring formula sheet,,ECSS 2.102,1440
+Scholarship application,2026-09-25,,General,60,Submit before end of day,https://example.com/apply,,240

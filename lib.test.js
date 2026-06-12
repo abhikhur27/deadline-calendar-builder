@@ -1,0 +1,55 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const {
+  buildCalendar,
+  buildMarkdownSummary,
+  parseDeadlineCsv,
+} = require('./lib');
+
+test('parseDeadlineCsv sorts deadlines and applies defaults', () => {
+  const csv = [
+    'title,due_date,due_time,course',
+    'Second item,2026-09-19,13:30,CS 4348',
+    'First item,2026-09-18,,MATH 2418',
+  ].join('\n');
+
+  const deadlines = parseDeadlineCsv(csv, { defaultDuration: 45, defaultReminder: 90 });
+  assert.equal(deadlines.length, 2);
+  assert.equal(deadlines[0].title, 'First item');
+  assert.equal(deadlines[0].durationMinutes, 45);
+  assert.equal(deadlines[0].reminderMinutes, 90);
+});
+
+test('buildCalendar emits timed and all-day events', () => {
+  const deadlines = parseDeadlineCsv(
+    [
+      'title,due_date,due_time,course,duration_minutes,reminder_minutes',
+      'Midterm,2026-09-22,14:00,CS 4348,120,1440',
+      'Application,2026-09-25,,General,60,240',
+    ].join('\n'),
+    {}
+  );
+
+  const ics = buildCalendar(deadlines, { timezone: 'America/Chicago' });
+  assert.match(ics, /DTSTART;TZID=America\/Chicago:20260922T140000/);
+  assert.match(ics, /DTEND;TZID=America\/Chicago:20260922T160000/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20260925/);
+  assert.match(ics, /TRIGGER:-PT1440M/);
+});
+
+test('buildMarkdownSummary groups daily windows', () => {
+  const deadlines = parseDeadlineCsv(
+    [
+      'title,due_date,due_time,course',
+      'Checkpoint,2026-09-18,23:59,EE 3302',
+      'Midterm,2026-09-22,14:00,CS 4348',
+    ].join('\n'),
+    {}
+  );
+
+  const summary = buildMarkdownSummary(deadlines, { timezone: 'America/Chicago' });
+  assert.match(summary, /# Deadline Review Sheet/);
+  assert.match(summary, /\| 2026-09-18 23:59 \| EE 3302 \| Checkpoint/);
+  assert.match(summary, /- 2026-09-22: CS 4348: Midterm \(14:00\)/);
+});
