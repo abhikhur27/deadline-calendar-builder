@@ -5,6 +5,7 @@ function parseOptions(args) {
     timezone: 'America/Chicago',
     defaultDuration: 60,
     defaultReminder: 120,
+    maxDayLoad: 240,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -22,6 +23,7 @@ function parseOptions(args) {
     else if (key === '--timezone') options.timezone = value;
     else if (key === '--default-duration') options.defaultDuration = toPositiveInt(value, key);
     else if (key === '--default-reminder') options.defaultReminder = toPositiveInt(value, key);
+    else if (key === '--max-day-load') options.maxDayLoad = toPositiveInt(value, key);
     else throw new Error(`Unknown option: ${key}`);
 
     index += 1;
@@ -202,6 +204,9 @@ function buildEvent(deadline, index, timezone) {
 
 function buildMarkdownSummary(deadlines, options = {}) {
   const timezone = options.timezone || 'America/Chicago';
+  const dayGroups = groupDeadlinesByDay(deadlines, options);
+  const courseGroups = groupDeadlinesByCourse(deadlines);
+  const overloadedDays = dayGroups.filter((group) => group.totalMinutes > (options.maxDayLoad || 240));
   const lines = [
     '# Deadline Review Sheet',
     '',
@@ -217,7 +222,15 @@ function buildMarkdownSummary(deadlines, options = {}) {
     }),
     '',
     '## Upcoming Windows',
-    ...groupDeadlinesByDay(deadlines).map((group) => `- ${group.date}: ${group.items.join('; ')}`),
+    ...dayGroups.map((group) => `- ${group.date}: ${group.items.join('; ')} [${group.totalMinutes} min scheduled]`),
+    '',
+    '## Load By Course',
+    ...courseGroups.map((group) => `- ${group.course}: ${group.items} item(s) | ${group.totalMinutes} min planned`),
+    '',
+    '## Load Warnings',
+    overloadedDays.length
+      ? `- Overloaded days above ${options.maxDayLoad || 240} min: ${overloadedDays.map((group) => `${group.date} (${group.totalMinutes} min)`).join('; ')}`
+      : `- No day exceeds the ${options.maxDayLoad || 240} minute load threshold.`,
     '',
   ];
 
@@ -229,11 +242,29 @@ function groupDeadlinesByDay(deadlines) {
   deadlines.forEach((deadline) => {
     const label = deadline.dueTime ? `${deadline.title} (${deadline.dueTime})` : `${deadline.title} (all day)`;
     if (!groups.has(deadline.dueDate)) {
-      groups.set(deadline.dueDate, []);
+      groups.set(deadline.dueDate, { items: [], totalMinutes: 0 });
     }
-    groups.get(deadline.dueDate).push(`${deadline.course}: ${label}`);
+    const group = groups.get(deadline.dueDate);
+    group.items.push(`${deadline.course}: ${label}`);
+    group.totalMinutes += deadline.durationMinutes;
   });
-  return [...groups.entries()].map(([date, items]) => ({ date, items }));
+  return [...groups.entries()].map(([date, value]) => ({ date, items: value.items, totalMinutes: value.totalMinutes }));
+}
+
+function groupDeadlinesByCourse(deadlines) {
+  const groups = new Map();
+  deadlines.forEach((deadline) => {
+    if (!groups.has(deadline.course)) {
+      groups.set(deadline.course, { totalMinutes: 0, items: 0 });
+    }
+    const group = groups.get(deadline.course);
+    group.totalMinutes += deadline.durationMinutes;
+    group.items += 1;
+  });
+
+  return [...groups.entries()]
+    .map(([course, value]) => ({ course, totalMinutes: value.totalMinutes, items: value.items }))
+    .sort((left, right) => right.totalMinutes - left.totalMinutes || left.course.localeCompare(right.course));
 }
 
 function shiftDate(dateText, deltaDays) {

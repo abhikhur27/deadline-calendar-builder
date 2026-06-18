@@ -41,15 +41,18 @@ test('buildCalendar emits timed and all-day events', () => {
 test('buildMarkdownSummary groups daily windows', () => {
   const deadlines = parseDeadlineCsv(
     [
-      'title,due_date,due_time,course',
-      'Checkpoint,2026-09-18,23:59,EE 3302',
-      'Midterm,2026-09-22,14:00,CS 4348',
+      'title,due_date,due_time,course,duration_minutes',
+      'Checkpoint,2026-09-18,23:59,EE 3302,45',
+      'Midterm,2026-09-22,14:00,CS 4348,180',
+      'Lab writeup,2026-09-22,18:00,CS 4348,90',
     ].join('\n'),
     {}
   );
 
-  const summary = buildMarkdownSummary(deadlines, { timezone: 'America/Chicago' });
+  const summary = buildMarkdownSummary(deadlines, { timezone: 'America/Chicago', maxDayLoad: 240 });
   assert.match(summary, /# Deadline Review Sheet/);
   assert.match(summary, /\| 2026-09-18 23:59 \| EE 3302 \| Checkpoint/);
-  assert.match(summary, /- 2026-09-22: CS 4348: Midterm \(14:00\)/);
+  assert.match(summary, /- 2026-09-22: CS 4348: Midterm \(14:00\); CS 4348: Lab writeup \(18:00\) \[270 min scheduled\]/);
+  assert.match(summary, /- CS 4348: 2 item\(s\) \| 270 min planned/);
+  assert.match(summary, /Overloaded days above 240 min: 2026-09-22 \(270 min\)/);
 });

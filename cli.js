@@ -14,6 +14,7 @@ function printHelp() {
 Usage:
   deadline-calendar-builder <input.csv> [--out deadlines.ics] [--summary deadlines.md]
     [--timezone America/Chicago] [--default-duration 60] [--default-reminder 120]
+    [--max-day-load 240]
 
 Expected CSV columns:
   title,due_date,due_time,course,duration_minutes,notes,url,location,reminder_minutes
@@ -22,6 +23,7 @@ Notes:
   - due_date accepts YYYY-MM-DD
   - due_time is optional; omit it for all-day deadline entries
   - duration_minutes and reminder_minutes are optional numeric columns
+  - max-day-load flags overloaded calendar days in the review sheet
 `);
 }
 

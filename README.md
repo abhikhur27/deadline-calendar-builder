@@ -35,6 +35,12 @@ If `due_time` is omitted, the row becomes an all-day calendar event.
 node cli.js ./example.csv --out finals.ics --summary finals.md --timezone America/Chicago --default-duration 90 --default-reminder 180
 ```
 
+If you want the review sheet to flag overloaded days for triage:
+
+```bash
+node cli.js ./example.csv --out finals.ics --summary finals.md --max-day-load 240
+```
+
 Or after a global install:
 
 ```bash
@@ -54,7 +60,7 @@ Scholarship application,2026-09-25,,General,60,Submit before end of day,https://
 ## Outputs
 
 - `deadlines.ics`: calendar events with reminders
-- `deadlines.md`: review sheet with one row per deadline plus grouped daily windows
+- `deadlines.md`: review sheet with one row per deadline plus grouped daily windows, course totals, and overloaded-day warnings
 
 ## Sanity Checks
 
