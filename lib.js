@@ -6,6 +6,7 @@ function parseOptions(args) {
     defaultDuration: 60,
     defaultReminder: 120,
     maxDayLoad: 240,
+    minGapHours: 18,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -24,6 +25,7 @@ function parseOptions(args) {
     else if (key === '--default-duration') options.defaultDuration = toPositiveInt(value, key);
     else if (key === '--default-reminder') options.defaultReminder = toPositiveInt(value, key);
     else if (key === '--max-day-load') options.maxDayLoad = toPositiveInt(value, key);
+    else if (key === '--min-gap-hours') options.minGapHours = toPositiveInt(value, key);
     else throw new Error(`Unknown option: ${key}`);
 
     index += 1;
@@ -207,6 +209,7 @@ function buildMarkdownSummary(deadlines, options = {}) {
   const dayGroups = groupDeadlinesByDay(deadlines, options);
   const courseGroups = groupDeadlinesByCourse(deadlines);
   const overloadedDays = dayGroups.filter((group) => group.totalMinutes > (options.maxDayLoad || 240));
+  const shortTurnarounds = findShortTurnarounds(deadlines, options.minGapHours || 18);
   const lines = [
     '# Deadline Review Sheet',
     '',
@@ -231,6 +234,11 @@ function buildMarkdownSummary(deadlines, options = {}) {
     overloadedDays.length
       ? `- Overloaded days above ${options.maxDayLoad || 240} min: ${overloadedDays.map((group) => `${group.date} (${group.totalMinutes} min)`).join('; ')}`
       : `- No day exceeds the ${options.maxDayLoad || 240} minute load threshold.`,
+    '',
+    '## Short Turnarounds',
+    shortTurnarounds.length
+      ? `- Consecutive deadlines inside ${options.minGapHours || 18} hour(s): ${shortTurnarounds.map((item) => `${item.from} -> ${item.to} (${item.gapHours}h gap)`).join('; ')}`
+      : `- No consecutive deadlines fall inside the ${options.minGapHours || 18} hour turnaround window.`,
     '',
   ];
 
@@ -265,6 +273,40 @@ function groupDeadlinesByCourse(deadlines) {
   return [...groups.entries()]
     .map(([course, value]) => ({ course, totalMinutes: value.totalMinutes, items: value.items }))
     .sort((left, right) => right.totalMinutes - left.totalMinutes || left.course.localeCompare(right.course));
+}
+
+function findShortTurnarounds(deadlines, maxGapHours) {
+  const output = [];
+  for (let index = 1; index < deadlines.length; index += 1) {
+    const previous = deadlines[index - 1];
+    const current = deadlines[index];
+    const previousDue = deadlineTimestamp(previous);
+    const currentDue = deadlineTimestamp(current);
+    const gapMs = currentDue - previousDue;
+    if (gapMs < 0) {
+      continue;
+    }
+
+    const gapHours = Number((gapMs / (1000 * 60 * 60)).toFixed(1));
+    if (gapHours <= maxGapHours) {
+      output.push({
+        from: `${previous.course}: ${previous.title} (${formatDeadlineLabel(previous)})`,
+        to: `${current.course}: ${current.title} (${formatDeadlineLabel(current)})`,
+        gapHours,
+      });
+    }
+  }
+  return output;
+}
+
+function deadlineTimestamp(deadline) {
+  const [year, month, day] = deadline.dueDate.split('-').map(Number);
+  const [hours, minutes] = (deadline.dueTime || '23:59').split(':').map(Number);
+  return Date.UTC(year, month - 1, day, hours, minutes);
+}
+
+function formatDeadlineLabel(deadline) {
+  return deadline.dueTime ? `${deadline.dueDate} ${deadline.dueTime}` : `${deadline.dueDate} all day`;
 }
 
 function shiftDate(dateText, deltaDays) {

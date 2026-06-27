@@ -14,7 +14,7 @@ function printHelp() {
 Usage:
   deadline-calendar-builder <input.csv> [--out deadlines.ics] [--summary deadlines.md]
     [--timezone America/Chicago] [--default-duration 60] [--default-reminder 120]
-    [--max-day-load 240]
+    [--max-day-load 240] [--min-gap-hours 18]
 
 Expected CSV columns:
   title,due_date,due_time,course,duration_minutes,notes,url,location,reminder_minutes
@@ -24,6 +24,7 @@ Notes:
   - due_time is optional; omit it for all-day deadline entries
   - duration_minutes and reminder_minutes are optional numeric columns
   - max-day-load flags overloaded calendar days in the review sheet
+  - min-gap-hours flags close consecutive deadlines in the review sheet
 `);
 }
 
@@ -51,6 +52,8 @@ function main() {
   const outputPath = path.resolve(options.out || 'deadlines.ics');
   const summaryPath = path.resolve(options.summary || 'deadlines.md');
 
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
   fs.writeFileSync(outputPath, icsText, 'utf8');
   fs.writeFileSync(summaryPath, summaryText, 'utf8');
 

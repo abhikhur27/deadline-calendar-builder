@@ -56,3 +56,19 @@ test('buildMarkdownSummary groups daily windows', () => {
   assert.match(summary, /- CS 4348: 2 item\(s\) \| 270 min planned/);
   assert.match(summary, /Overloaded days above 240 min: 2026-09-22 \(270 min\)/);
 });
+
+test('buildMarkdownSummary flags short turnaround deadlines', () => {
+  const deadlines = parseDeadlineCsv(
+    [
+      'title,due_date,due_time,course,duration_minutes',
+      'Lab writeup,2026-09-22,20:00,CS 4348,90',
+      'Quiz retake,2026-09-23,08:00,CS 4348,30',
+      'Project demo,2026-09-26,09:00,CS 4348,45',
+    ].join('\n'),
+    {}
+  );
+
+  const summary = buildMarkdownSummary(deadlines, { minGapHours: 18 });
+  assert.match(summary, /Consecutive deadlines inside 18 hour\(s\):/);
+  assert.match(summary, /Lab writeup \(2026-09-22 20:00\) -> CS 4348: Quiz retake \(2026-09-23 08:00\) \(12h gap\)/);
+});
