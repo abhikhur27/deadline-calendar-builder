@@ -72,3 +72,19 @@ test('buildMarkdownSummary flags short turnaround deadlines', () => {
   assert.match(summary, /Consecutive deadlines inside 18 hour\(s\):/);
   assert.match(summary, /Lab writeup \(2026-09-22 20:00\) -> CS 4348: Quiz retake \(2026-09-23 08:00\) \(12h gap\)/);
 });
+
+test('buildMarkdownSummary flags duplicate-looking rows', () => {
+  const deadlines = parseDeadlineCsv(
+    [
+      'title,due_date,due_time,course,duration_minutes',
+      'Project demo,2026-09-26,09:00,CS 4348,45',
+      'Project demo,2026-09-26,09:00,CS 4348,45',
+      'Office hours,2026-09-27,10:00,CS 4348,30',
+    ].join('\n'),
+    {}
+  );
+
+  const summary = buildMarkdownSummary(deadlines, {});
+  assert.match(summary, /## Duplicate-Looking Rows/);
+  assert.match(summary, /CS 4348: Project demo on 2026-09-26 09:00 \(2 rows\)/);
+});

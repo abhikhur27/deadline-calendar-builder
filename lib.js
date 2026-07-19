@@ -210,6 +210,7 @@ function buildMarkdownSummary(deadlines, options = {}) {
   const courseGroups = groupDeadlinesByCourse(deadlines);
   const overloadedDays = dayGroups.filter((group) => group.totalMinutes > (options.maxDayLoad || 240));
   const shortTurnarounds = findShortTurnarounds(deadlines, options.minGapHours || 18);
+  const duplicateClusters = findDuplicateDeadlineClusters(deadlines);
   const lines = [
     '# Deadline Review Sheet',
     '',
@@ -239,6 +240,11 @@ function buildMarkdownSummary(deadlines, options = {}) {
     shortTurnarounds.length
       ? `- Consecutive deadlines inside ${options.minGapHours || 18} hour(s): ${shortTurnarounds.map((item) => `${item.from} -> ${item.to} (${item.gapHours}h gap)`).join('; ')}`
       : `- No consecutive deadlines fall inside the ${options.minGapHours || 18} hour turnaround window.`,
+    '',
+    '## Duplicate-Looking Rows',
+    duplicateClusters.length
+      ? `- Review these repeated entries before import: ${duplicateClusters.map((cluster) => `${cluster.course}: ${cluster.title} on ${cluster.when} (${cluster.count} rows)`).join('; ')}`
+      : '- No duplicate-looking deadline rows were detected.',
     '',
   ];
 
@@ -273,6 +279,32 @@ function groupDeadlinesByCourse(deadlines) {
   return [...groups.entries()]
     .map(([course, value]) => ({ course, totalMinutes: value.totalMinutes, items: value.items }))
     .sort((left, right) => right.totalMinutes - left.totalMinutes || left.course.localeCompare(right.course));
+}
+
+function findDuplicateDeadlineClusters(deadlines) {
+  const grouped = new Map();
+  deadlines.forEach((deadline) => {
+    const key = [
+      deadline.course.trim().toLowerCase(),
+      deadline.title.trim().toLowerCase(),
+      deadline.dueDate,
+      deadline.dueTime || 'all-day',
+    ].join('::');
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+    }
+    grouped.get(key).push(deadline);
+  });
+
+  return [...grouped.values()]
+    .filter((rows) => rows.length > 1)
+    .map((rows) => ({
+      course: rows[0].course,
+      title: rows[0].title,
+      when: formatDeadlineLabel(rows[0]),
+      count: rows.length,
+    }))
+    .sort((left, right) => right.count - left.count || left.when.localeCompare(right.when));
 }
 
 function findShortTurnarounds(deadlines, maxGapHours) {
@@ -358,6 +390,7 @@ function slugify(value) {
 module.exports = {
   buildCalendar,
   buildMarkdownSummary,
+  findDuplicateDeadlineClusters,
   parseDeadlineCsv,
   parseOptions,
 };

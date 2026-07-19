@@ -60,7 +60,7 @@ Scholarship application,2026-09-25,,General,60,Submit before end of day,https://
 ## Outputs
 
 - `deadlines.ics`: calendar events with reminders
-- `deadlines.md`: review sheet with one row per deadline plus grouped daily windows, course totals, overloaded-day warnings, and short-turnaround alerts between close deadlines
+- `deadlines.md`: review sheet with one row per deadline plus grouped daily windows, course totals, overloaded-day warnings, short-turnaround alerts between close deadlines, and duplicate-looking row warnings before import
 
 ## Sanity Checks
 
